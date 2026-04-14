@@ -16,23 +16,50 @@ import os
 MY_EMAIL = os.environ.get("MY_EMAIL")
 MY_PASSWORD = os.environ.get("MY_PASSWORD")
 
-today = datetime.now()
-today_tuple = (today.month, today.day)
 
-data = pandas.read_csv("birthdays.csv")
-birthdays_dict = {(data_row["month"], data_row["day"])                  : data_row for (index, data_row) in data.iterrows()}
-if today_tuple in birthdays_dict:
-    birthday_person = birthdays_dict[today_tuple]
-    file_path = f"letter_templates/letter_{random.randint(1, 3)}.txt"
-    with open(file_path) as letter_file:
-        contents = letter_file.read()
-        contents = contents.replace("[NAME]", birthday_person["name"])
+LETTER_TEMPLATES = ["letter_1.txt", "letter_2.txt", "letter_3.txt"]
 
-    with smtplib.SMTP("YOUR EMAIL PROVIDER SMTP SERVER ADDRESS") as connection:
-        connection.starttls()
-        connection.login(MY_EMAIL, MY_PASSWORD)
-        connection.sendmail(
-            from_addr=MY_EMAIL,
-            to_addrs=birthday_person["email"],
-            msg=f"Subject:Happy Birthday!\n\n{contents}"
-        )
+# 1. Update the birthdays.csv
+birth_data_df = pd.read_csv("birthdays.csv")
+
+now = dt.datetime.now()
+
+for index,row in birth_data_df.iterrows():
+    letter_template = random.choice(LETTER_TEMPLATES)
+
+    # 2. Check if today matches a birthday in the birthdays.csv
+
+    if row.day == now.day and row.month == now.month:
+
+        # 3. If step 2 is true, pick a random letter from letter templates and
+        # replace the [NAME] with the person's actual name from birthdays.csv
+
+        with open(f"./letter_templates/{letter_template}") as file:
+            new_data = file.readlines()
+            new_data[0] = new_data[0].replace("[NAME]", f"{row["name"]}")
+            with open("sending_content.txt", mode="w") as to_send:
+                to_send.writelines(new_data)
+
+        # 4. Send the letter generated in step 3 to that person's email address.
+
+        with smtplib.SMTP(host="smtp.gmail.com", port=587) as connection:
+            connection.starttls()
+            connection.login(EMAIL, PWD)
+            file = open("sending_content.txt")
+            connection.sendmail(
+                from_addr=EMAIL,
+                to_addrs=row.email,
+                msg=f"Subject: Happy Birthday\n\n{file.read()}")
+            file.close()
+
+
+
+
+
+
+
+
+
+
+
+
